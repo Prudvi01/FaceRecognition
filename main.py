@@ -7,7 +7,13 @@ import argparse
 import time
 import cv2
 import os
-
+import smtplib,ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase 
+from email.mime.text import MIMEText 
+from email.utils import formatdate
+from email import encoders
+from datetime import date
 
 class IdData:
     """Keeps track of known identities and calculates id matches"""
@@ -118,77 +124,119 @@ def main(args):
                 args.threshold,
             )
 
-            cap = cv2.VideoCapture(0)
-            frame_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            # OPEN CAMERA AND TAKE A SNAPSHOT
+            cam = cv2.VideoCapture(0)
+            cv2.namedWindow("test")
+            img_counter = 0
 
-            show_landmarks = False
-            show_bb = False
-            show_id = True
-            show_fps = False
             while True:
-                start = time.time()
-                _, frame = cap.read()
-
-                # Locate faces and landmarks in frame
-                face_patches, padded_bounding_boxes, landmarks = detect_and_align.detect_faces(frame, mtcnn)
-
-                if len(face_patches) > 0:
-                    face_patches = np.stack(face_patches)
-                    feed_dict = {images_placeholder: face_patches, phase_train_placeholder: False}
-                    embs = sess.run(embeddings, feed_dict=feed_dict)
-
-                    print("Matches in frame:")
-                    matching_ids, matching_distances = id_data.find_matching_ids(embs)
-
-                    for bb, landmark, matching_id, dist in zip(
-                        padded_bounding_boxes, landmarks, matching_ids, matching_distances
-                    ):
-                        if matching_id is None:
-                            matching_id = "Unknown"
-                            print("Unknown! Couldn't fint match.")
-                        else:
-                            print("Hi %s! Distance: %1.4f" % (matching_id, dist))
-
-                        if show_id:
-                            font = cv2.FONT_HERSHEY_SIMPLEX
-                            cv2.putText(frame, matching_id, (bb[0], bb[3]), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
-                        if show_bb:
-                            cv2.rectangle(frame, (bb[0], bb[1]), (bb[2], bb[3]), (255, 0, 0), 2)
-                        if show_landmarks:
-                            for j in range(5):
-                                size = 1
-                                top_left = (int(landmark[j]) - size, int(landmark[j + 5]) - size)
-                                bottom_right = (int(landmark[j]) + size, int(landmark[j + 5]) + size)
-                                cv2.rectangle(frame, top_left, bottom_right, (255, 0, 255), 2)
-                else:
-                    print("Couldn't find a face")
-
-                end = time.time()
-
-                seconds = end - start
-                fps = round(1 / seconds, 2)
-
-                if show_fps:
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    cv2.putText(frame, str(fps), (0, int(frame_height) - 5), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
-
-                cv2.imshow("frame", frame)
-
-                key = cv2.waitKey(1)
-                if key == ord("q"):
+                ret, frame = cam.read()
+                cv2.imshow("test", frame)
+                if not ret:
                     break
-                elif key == ord("l"):
-                    show_landmarks = not show_landmarks
-                elif key == ord("b"):
-                    show_bb = not show_bb
-                elif key == ord("i"):
-                    show_id = not show_id
-                elif key == ord("f"):
-                    show_fps = not show_fps
+                k = cv2.waitKey(1)
 
-            cap.release()
+                if k%256 == 27:
+                    # ESC pressed
+                    print("Escape hit, closing...")
+                    break
+                elif k%256 == 32:
+                    # SPACE pressed
+                    img_name = "attendance" + str(date.today()) + ".png"
+                    cv2.imwrite(img_name, frame)
+                    print("{} written!".format(img_name))
+                    img_counter += 1
+
+            cam.release()
+
             cv2.destroyAllWindows()
+            
+            # Now that we have an image, we detect and recognise the faces and append them in list
+            present = []
 
+            face_patches, padded_bounding_boxes, landmarks = detect_and_align.detect_faces(frame, mtcnn)
+
+            if len(face_patches) > 0:
+                face_patches = np.stack(face_patches)
+                feed_dict = {images_placeholder: face_patches, phase_train_placeholder: False}
+                embs = sess.run(embeddings, feed_dict=feed_dict)
+
+                print("Attendance:")
+                matching_ids, matching_distances = id_data.find_matching_ids(embs)
+
+                for bb, landmark, matching_id, dist in zip(
+                    padded_bounding_boxes, landmarks, matching_ids, matching_distances
+                ):
+                    if matching_id is None:
+                        matching_id = "Unknown"
+                        print("Unknown! Couldn't find match.")
+                    else:
+                        print("%s" % (matching_id)) #prints all the names present in the image
+                        present.append(matching_id)
+                        with open('presentstudents.txt', 'w') as filehandle: 
+                            for listitem in present:
+                                filehandle.write('%s\n' % listitem)
+            else:
+                print("Couldn't find a face")
+                
+def send_an_email():
+    subject = "Attendance on date: " + str(date.today())
+    body = "This is an email with attachment sent from Python"
+    sender_email = input("Enter your email id: ") # "developericewich@gmail.com"
+    password = input("Type your password and press enter:") # "developertesting"
+    receiver_email = input("Enter receiver's email id: ") # "developericewich@gmail.com"
+    
+    # Create a multipart message and set headers
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject
+    message["Bcc"] = receiver_email  # Recommended for mass emails
+
+    # Add body to email
+    message.attach(MIMEText(body, "plain"))
+
+    attendancefile = "presentstudents.txt"  # In same directory as script
+    attendancephoto = "attendance" + str(date.today()) + ".png"
+
+    # Open txt file in binary mode
+    with open(attendancefile, "rb") as attachment:
+        # Add file as application/octet-stream
+        # Email client can usually download this automatically as attachment
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(attachment.read())
+
+    # Open png file in binary mode
+    with open(attendancephoto, "rb") as attachment:
+        # Add file as application/octet-stream
+        # Email client can usually download this automatically as attachment
+        part2 = MIMEBase("application", "octet-stream")
+        part2.set_payload(attachment.read())
+
+    # Encode file in ASCII characters to send by email    
+    encoders.encode_base64(part)
+    encoders.encode_base64(part2)
+
+    # Add header as key/value pair to attachment part
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {attendancefile}",
+    )
+    part2.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {attendancephoto}",
+    )
+    # Add attachment to message and convert message to string
+    message.attach(part)
+    message.attach(part2)
+    text = message.as_string()
+
+    # Log in to server using secure context and send email
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, text)
+    print("Email sent to " + receiver_email)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -197,3 +245,4 @@ if __name__ == "__main__":
     parser.add_argument("id_folder", type=str, nargs="+", help="Folder containing ID folders")
     parser.add_argument("-t", "--threshold", type=float, help="Distance threshold defining an id match", default=1.2)
     main(parser.parse_args())
+    send_an_email()

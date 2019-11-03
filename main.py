@@ -142,7 +142,7 @@ def main(args):
                     break
                 elif k%256 == 32:
                     # SPACE pressed
-                    img_name = "opencv_frame_{}.png".format(img_counter)
+                    img_name = "attendance" + str(date.today()) + ".png"
                     cv2.imwrite(img_name, frame)
                     print("{} written!".format(img_name))
                     img_counter += 1
@@ -180,7 +180,7 @@ def main(args):
                 print("Couldn't find a face")
                 
 def send_an_email():
-    subject = "Attendance on date: " + date.today()
+    subject = "Attendance on date: " + str(date.today())
     body = "This is an email with attachment sent from Python"
     sender_email = input("Enter your email id: ") # "developericewich@gmail.com"
     password = input("Type your password and press enter:") # "developertesting"
@@ -196,26 +196,38 @@ def send_an_email():
     # Add body to email
     message.attach(MIMEText(body, "plain"))
 
-    filename = "presentstudents.txt"  # In same directory as script
+    attendancefile = "presentstudents.txt"  # In same directory as script
+    attendancephoto = "attendance" + str(date.today()) + ".png"
 
     # Open PDF file in binary mode
-    with open(filename, "rb") as attachment:
+    with open(attendancefile, "rb") as attachment:
         # Add file as application/octet-stream
         # Email client can usually download this automatically as attachment
         part = MIMEBase("application", "octet-stream")
         part.set_payload(attachment.read())
 
+    with open(attendancephoto, "rb") as attachment:
+        # Add file as application/octet-stream
+        # Email client can usually download this automatically as attachment
+        part2 = MIMEBase("application", "octet-stream")
+        part2.set_payload(attachment.read())
+
     # Encode file in ASCII characters to send by email    
     encoders.encode_base64(part)
+    encoders.encode_base64(part2)
 
     # Add header as key/value pair to attachment part
     part.add_header(
         "Content-Disposition",
-        f"attachment; filename= {filename}",
+        f"attachment; filename= {attendancefile}",
     )
-
+    part2.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {attendancephoto}",
+    )
     # Add attachment to message and convert message to string
     message.attach(part)
+    message.attach(part2)
     text = message.as_string()
 
     # Log in to server using secure context and send email
@@ -223,6 +235,7 @@ def send_an_email():
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
         server.login(sender_email, password)
         server.sendmail(sender_email, receiver_email, text)
+    print("Email sent to " + receiver_email)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

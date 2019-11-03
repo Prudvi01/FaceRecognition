@@ -123,12 +123,9 @@ def main(args):
                 args.threshold,
             )
 
-            #cap = cv2.VideoCapture(0)
-            #frame_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            # OPEN CAMERA AND TAKE A SNAPSHOT
             cam = cv2.VideoCapture(0)
-
             cv2.namedWindow("test")
-
             img_counter = 0
 
             while True:
@@ -152,11 +149,8 @@ def main(args):
             cam.release()
 
             cv2.destroyAllWindows()
-
-            show_landmarks = False
-            show_bb = False
-            show_id = True
-            show_fps = False
+            
+            # Now that we have an image, we detect and recognise the faces and append them in list
             present = []
 
             face_patches, padded_bounding_boxes, landmarks = detect_and_align.detect_faces(frame, mtcnn)
@@ -181,48 +175,9 @@ def main(args):
                         with open('presentstudents.txt', 'w') as filehandle: 
                             for listitem in present:
                                 filehandle.write('%s\n' % listitem)
-
-                    if show_id:
-                        font = cv2.FONT_HERSHEY_SIMPLEX
-                        cv2.putText(frame, matching_id, (bb[0], bb[3]), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
-                    if show_bb:
-                        cv2.rectangle(frame, (bb[0], bb[1]), (bb[2], bb[3]), (255, 0, 0), 2)
-                    if show_landmarks:
-                        for j in range(5):
-                            size = 1
-                            top_left = (int(landmark[j]) - size, int(landmark[j + 5]) - size)
-                            bottom_right = (int(landmark[j]) + size, int(landmark[j + 5]) + size)
-                            cv2.rectangle(frame, top_left, bottom_right, (255, 0, 255), 2)
             else:
                 print("Couldn't find a face")
                 
-                '''
-                #end = time.time()
-
-                #seconds = end - start
-                #fps = round(1 / seconds, 2)
-                if show_fps:
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    cv2.putText(frame, str(fps), (0, int(frame_height) - 5), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
-
-                cv2.imshow("frame", frame)
-
-                key = cv2.waitKey(1)
-                if key == ord("q"):
-                    break
-                elif key == ord("l"):
-                    show_landmarks = not show_landmarks
-                elif key == ord("b"):
-                    show_bb = not show_bb
-                elif key == ord("i"):
-                    show_id = not show_id
-                elif key == ord("f"):
-                    show_fps = not show_fps
-
-            cap.release()
-            cv2.destroyAllWindows()
-            '''
-
 def send_an_email():
     subject = "Attendance"
     body = "This is an email with attachment sent from Python"

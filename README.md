@@ -26,12 +26,7 @@ E.g. id folder named `ids` containing subfolders `Adam` and `Eve`, each containi
 │   ├── Eve
 │   │   ├── Eve0.png
 ```
-Download and unpack the [model](https://drive.google.com/file/d/0B5MzpY9kBtDVZ2RpVDYwWmxoSUk) to a folder and run `python3 main.py ./folder/model.pb ./ids/` to start the program. Make sure to replace `./folder/model.pb` with the path to the downloaded model.
-
-Visualization hotkeys:
-*   l - toggle facial landmarks
-*   b - toggle bounding box
-*   i - toggle id
-*   f - toggle frames per second
-
-![alt text](https://github.com/habrman/FaceRecognition/blob/master/example.png)
+Download and unpack the [model](https://drive.google.com/file/d/0B5MzpY9kBtDVZ2RpVDYwWmxoSUk) to a folder.
+Run `pip install -m "requirements.txt"` (recommended in a virtualenv)
+Run `python3 main.py ./folder/model.pb ./ids/` to start the program. Make sure to replace `./folder/model.pb` with the path to the downloaded model.
+Press space key to take a snapshot and save it and then esc to close the camera window

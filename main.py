@@ -169,7 +169,7 @@ def main(args):
                 ):
                     if matching_id is None:
                         matching_id = "Unknown"
-                        print("Unknown! Couldn't fint match.")
+                        print("Unknown! Couldn't find match.")
                     else:
                         print("%s" % (matching_id)) #prints all the names present in the image
                         present.append(matching_id)
@@ -205,7 +205,7 @@ def send_an_email():
         # Email client can usually download this automatically as attachment
         part = MIMEBase("application", "octet-stream")
         part.set_payload(attachment.read())
-        
+
     # Open png file in binary mode
     with open(attendancephoto, "rb") as attachment:
         # Add file as application/octet-stream

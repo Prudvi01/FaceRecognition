@@ -7,7 +7,12 @@ import argparse
 import time
 import cv2
 import os
-
+import smtplib,ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase 
+from email.mime.text import MIMEText 
+from email.utils import formatdate
+from email import encoders
 
 class IdData:
     """Keeps track of known identities and calculates id matches"""
@@ -118,56 +123,88 @@ def main(args):
                 args.threshold,
             )
 
-            cap = cv2.VideoCapture(0)
-            frame_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            #cap = cv2.VideoCapture(0)
+            #frame_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            cam = cv2.VideoCapture(0)
+
+            cv2.namedWindow("test")
+
+            img_counter = 0
+
+            while True:
+                ret, frame = cam.read()
+                cv2.imshow("test", frame)
+                if not ret:
+                    break
+                k = cv2.waitKey(1)
+
+                if k%256 == 27:
+                    # ESC pressed
+                    print("Escape hit, closing...")
+                    break
+                elif k%256 == 32:
+                    # SPACE pressed
+                    img_name = "opencv_frame_{}.png".format(img_counter)
+                    cv2.imwrite(img_name, frame)
+                    print("{} written!".format(img_name))
+                    img_counter += 1
+
+            cam.release()
+
+            cv2.destroyAllWindows()
 
             show_landmarks = False
             show_bb = False
             show_id = True
             show_fps = False
-            while True:
-                start = time.time()
-                _, frame = cap.read()
+            present = []
+            #while True:
+                #start = time.time()
+                #_, frame = cam.read()
 
                 # Locate faces and landmarks in frame
-                face_patches, padded_bounding_boxes, landmarks = detect_and_align.detect_faces(frame, mtcnn)
+            face_patches, padded_bounding_boxes, landmarks = detect_and_align.detect_faces(frame, mtcnn)
 
-                if len(face_patches) > 0:
-                    face_patches = np.stack(face_patches)
-                    feed_dict = {images_placeholder: face_patches, phase_train_placeholder: False}
-                    embs = sess.run(embeddings, feed_dict=feed_dict)
+            if len(face_patches) > 0:
+                face_patches = np.stack(face_patches)
+                feed_dict = {images_placeholder: face_patches, phase_train_placeholder: False}
+                embs = sess.run(embeddings, feed_dict=feed_dict)
 
-                    print("Matches in frame:")
-                    matching_ids, matching_distances = id_data.find_matching_ids(embs)
+                print("Attendance:")
+                matching_ids, matching_distances = id_data.find_matching_ids(embs)
 
-                    for bb, landmark, matching_id, dist in zip(
-                        padded_bounding_boxes, landmarks, matching_ids, matching_distances
-                    ):
-                        if matching_id is None:
-                            matching_id = "Unknown"
-                            print("Unknown! Couldn't fint match.")
-                        else:
-                            print("Hi %s! Distance: %1.4f" % (matching_id, dist))
+                for bb, landmark, matching_id, dist in zip(
+                    padded_bounding_boxes, landmarks, matching_ids, matching_distances
+                ):
+                    if matching_id is None:
+                        matching_id = "Unknown"
+                        print("Unknown! Couldn't fint match.")
+                    else:
+                        print("%s" % (matching_id)) #prints all the names present in the image
+                        present.append(matching_id)
+                        with open('presentstudents.txt', 'w') as filehandle: 
+                            for listitem in present:
+                                filehandle.write('%s\n' % listitem)
 
-                        if show_id:
-                            font = cv2.FONT_HERSHEY_SIMPLEX
-                            cv2.putText(frame, matching_id, (bb[0], bb[3]), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
-                        if show_bb:
-                            cv2.rectangle(frame, (bb[0], bb[1]), (bb[2], bb[3]), (255, 0, 0), 2)
-                        if show_landmarks:
-                            for j in range(5):
-                                size = 1
-                                top_left = (int(landmark[j]) - size, int(landmark[j + 5]) - size)
-                                bottom_right = (int(landmark[j]) + size, int(landmark[j + 5]) + size)
-                                cv2.rectangle(frame, top_left, bottom_right, (255, 0, 255), 2)
-                else:
-                    print("Couldn't find a face")
+                    if show_id:
+                        font = cv2.FONT_HERSHEY_SIMPLEX
+                        cv2.putText(frame, matching_id, (bb[0], bb[3]), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
+                    if show_bb:
+                        cv2.rectangle(frame, (bb[0], bb[1]), (bb[2], bb[3]), (255, 0, 0), 2)
+                    if show_landmarks:
+                        for j in range(5):
+                            size = 1
+                            top_left = (int(landmark[j]) - size, int(landmark[j + 5]) - size)
+                            bottom_right = (int(landmark[j]) + size, int(landmark[j + 5]) + size)
+                            cv2.rectangle(frame, top_left, bottom_right, (255, 0, 255), 2)
+            else:
+                print("Couldn't find a face")
+                
+                '''
+                #end = time.time()
 
-                end = time.time()
-
-                seconds = end - start
-                fps = round(1 / seconds, 2)
-
+                #seconds = end - start
+                #fps = round(1 / seconds, 2)
                 if show_fps:
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     cv2.putText(frame, str(fps), (0, int(frame_height) - 5), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
@@ -188,8 +225,34 @@ def main(args):
 
             cap.release()
             cv2.destroyAllWindows()
-
-
+            '''
+'''
+def send_an_email():
+    toaddr = 'cvsn29799@gmail.com'#'manognya.katapally@gmail.com'
+    me = 'manokatapally@gmail.com'
+    subject = "ATTENDACE IT-B,3rd year" 
+    msg = MIMEMultipart()
+    msg['Subject'] = subject
+    msg['From'] = me
+    msg['To'] = toaddr
+    msg.preamble = "test " #msg.attach(MIMEText(text))
+    part = MIMEBase('application', "octet-stream")
+    part.set_payload(open("presentstudents.txt", "rb").read()) 
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', 'attachment; filename="presentstudents.txt"') 
+    msg.attach(part)
+    try:
+        s = smtplib.SMTP('smtp.gmail.com', 587)
+        s.ehlo()
+        s.starttls()
+        s.ehlo()
+        s.login(user = 'cvsn29799@gmail.com', password = 'kb24lj23ai3ki2') #s.send_message(msg)
+        s.sendmail(me, toaddr, msg.as_string())
+        s.quit()
+    except:
+        # print ("Error: unable to send email") except SMTPException as error:
+        print("Error")
+'''
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -197,3 +260,4 @@ if __name__ == "__main__":
     parser.add_argument("id_folder", type=str, nargs="+", help="Folder containing ID folders")
     parser.add_argument("-t", "--threshold", type=float, help="Distance threshold defining an id match", default=1.2)
     main(parser.parse_args())
+    #send_an_email()

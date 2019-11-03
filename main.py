@@ -158,11 +158,7 @@ def main(args):
             show_id = True
             show_fps = False
             present = []
-            #while True:
-                #start = time.time()
-                #_, frame = cam.read()
 
-                # Locate faces and landmarks in frame
             face_patches, padded_bounding_boxes, landmarks = detect_and_align.detect_faces(frame, mtcnn)
 
             if len(face_patches) > 0:
@@ -226,33 +222,51 @@ def main(args):
             cap.release()
             cv2.destroyAllWindows()
             '''
-'''
+
 def send_an_email():
-    toaddr = 'cvsn29799@gmail.com'#'manognya.katapally@gmail.com'
-    me = 'manokatapally@gmail.com'
-    subject = "ATTENDACE IT-B,3rd year" 
-    msg = MIMEMultipart()
-    msg['Subject'] = subject
-    msg['From'] = me
-    msg['To'] = toaddr
-    msg.preamble = "test " #msg.attach(MIMEText(text))
-    part = MIMEBase('application', "octet-stream")
-    part.set_payload(open("presentstudents.txt", "rb").read()) 
+    subject = "Attendance"
+    body = "This is an email with attachment sent from Python"
+    sender_email = "developericewich@gmail.com"
+    receiver_email = "developericewich@gmail.com"
+    password = "developertesting"#input("Type your password and press enter:")
+    # Create a multipart message and set headers
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject
+    message["Bcc"] = receiver_email  # Recommended for mass emails
+
+    # Add body to email
+    message.attach(MIMEText(body, "plain"))
+
+    filename = "presentstudents.txt"  # In same directory as script
+
+    # Open PDF file in binary mode
+    with open(filename, "rb") as attachment:
+        # Add file as application/octet-stream
+        # Email client can usually download this automatically as attachment
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(attachment.read())
+
+    # Encode file in ASCII characters to send by email    
     encoders.encode_base64(part)
-    part.add_header('Content-Disposition', 'attachment; filename="presentstudents.txt"') 
-    msg.attach(part)
-    try:
-        s = smtplib.SMTP('smtp.gmail.com', 587)
-        s.ehlo()
-        s.starttls()
-        s.ehlo()
-        s.login(user = 'cvsn29799@gmail.com', password = 'kb24lj23ai3ki2') #s.send_message(msg)
-        s.sendmail(me, toaddr, msg.as_string())
-        s.quit()
-    except:
-        # print ("Error: unable to send email") except SMTPException as error:
-        print("Error")
-'''
+
+    # Add header as key/value pair to attachment part
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {filename}",
+    )
+
+    # Add attachment to message and convert message to string
+    message.attach(part)
+    text = message.as_string()
+
+    # Log in to server using secure context and send email
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, text)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -260,4 +274,4 @@ if __name__ == "__main__":
     parser.add_argument("id_folder", type=str, nargs="+", help="Folder containing ID folders")
     parser.add_argument("-t", "--threshold", type=float, help="Distance threshold defining an id match", default=1.2)
     main(parser.parse_args())
-    #send_an_email()
+    send_an_email()

@@ -13,6 +13,7 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText 
 from email.utils import formatdate
 from email import encoders
+from datetime import date
 
 class IdData:
     """Keeps track of known identities and calculates id matches"""
@@ -179,11 +180,12 @@ def main(args):
                 print("Couldn't find a face")
                 
 def send_an_email():
-    subject = "Attendance"
+    subject = "Attendance on date: " + date.today()
     body = "This is an email with attachment sent from Python"
-    sender_email = "developericewich@gmail.com"
-    receiver_email = "developericewich@gmail.com"
-    password = "developertesting"#input("Type your password and press enter:")
+    sender_email = input("Enter your email id: ") # "developericewich@gmail.com"
+    password = input("Type your password and press enter:") # "developertesting"
+    receiver_email = input("Enter receiver's email id: ") # "developericewich@gmail.com"
+    
     # Create a multipart message and set headers
     message = MIMEMultipart()
     message["From"] = sender_email

@@ -199,13 +199,14 @@ def send_an_email():
     attendancefile = "presentstudents.txt"  # In same directory as script
     attendancephoto = "attendance" + str(date.today()) + ".png"
 
-    # Open PDF file in binary mode
+    # Open txt file in binary mode
     with open(attendancefile, "rb") as attachment:
         # Add file as application/octet-stream
         # Email client can usually download this automatically as attachment
         part = MIMEBase("application", "octet-stream")
         part.set_payload(attachment.read())
-
+        
+    # Open png file in binary mode
     with open(attendancephoto, "rb") as attachment:
         # Add file as application/octet-stream
         # Email client can usually download this automatically as attachment

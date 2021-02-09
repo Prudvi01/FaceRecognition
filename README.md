@@ -1,6 +1,6 @@
-# FaceRecognition
+# Smart Attendance
 Webcam face recognition using tensorflow and opencv.
-The application tries to find faces in the webcam image and match them against images in an id folder using deep neural networks.
+The application tries to find faces in the webcam image and match them against images in an id folder using deep neural networks. The names of these faces are then used to create a list of people present and emails a .csv file to a teacher.
 
 ## Dependencies
 *   OpenCv
